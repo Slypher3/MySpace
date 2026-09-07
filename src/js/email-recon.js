@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════
    CyberSpace — Email Recon Module
-   Gravatar lookup + DNS MX/SPF/DMARC check
+   Gravatar + XposedOrNot breach check + DNS security
    ═══════════════════════════════════════════════════ */
 
 (function () {
@@ -10,11 +10,10 @@
   const input = document.getElementById('email-recon-input');
   const btn = document.getElementById('email-recon-btn');
   const resultContainer = document.getElementById('email-recon-result');
-  let hasInitialized = false;
 
   // ══════════════════════════════════════
   // Minimal MD5 implementation (RFC 1321)
-  // Needed because crypto.subtle doesn't support MD5
+  // crypto.subtle doesn't support MD5
   // ══════════════════════════════════════
   function md5(string) {
     function cmn(q, a, b, x, s, t) {
@@ -109,6 +108,31 @@
   }
 
   // ══════════════════════════════════════
+  // XposedOrNot — Email Breach Check
+  // ══════════════════════════════════════
+  async function checkBreaches(email) {
+    try {
+      const resp = await fetch(
+        `https://api.xposedornot.com/v1/breach-analytics?email=${encodeURIComponent(email)}`
+      );
+      if (resp.status === 404) return { found: false, breaches: [], summary: null };
+      if (!resp.ok) return { found: false, breaches: [], summary: null, error: true };
+      const data = await resp.json();
+
+      const breachDetails = data.ExposedBreaches?.breaches_details || [];
+      const metrics = data.BreachesSummary || null;
+
+      return {
+        found: breachDetails.length > 0,
+        breaches: breachDetails,
+        summary: metrics,
+      };
+    } catch {
+      return { found: false, breaches: [], summary: null, error: true };
+    }
+  }
+
+  // ══════════════════════════════════════
   // Main recon function
   // ══════════════════════════════════════
   async function runEmailRecon(email) {
@@ -127,10 +151,11 @@
     `;
 
     // Run all checks in parallel
-    const [mxRecords, txtRecords, gravatarExists] = await Promise.all([
+    const [mxRecords, txtRecords, gravatarExists, breachData] = await Promise.all([
       dnsLookup(domain, 'MX'),
       dnsLookup(domain, 'TXT'),
       checkGravatarAvatar(hash),
+      checkBreaches(emailLower),
     ]);
 
     // Parse DNS security
@@ -145,7 +170,87 @@
     // Build results HTML
     let html = '';
 
-    // ── Gravatar Section ──
+    // ══════════════════════════════════════
+    // SECTION 1: Breach Check (most important — show first)
+    // ══════════════════════════════════════
+    html += `
+      <div class="cyber-card">
+        <div class="card-header">
+          <span class="card-icon">🚨</span>
+          <h2>Data Breach Report</h2>
+        </div>
+    `;
+
+    if (breachData.error) {
+      html += `
+        <div class="result-box" style="border-color: var(--text-dim); background: rgba(255,255,255,0.02);">
+          <div class="result-icon">⚠️</div>
+          <div class="result-title" style="color: var(--orange);">Service Unavailable</div>
+          <div class="result-detail">Could not reach the XposedOrNot breach database. Try again later.</div>
+        </div>
+      `;
+    } else if (!breachData.found) {
+      html += `
+        <div class="result-box safe">
+          <div class="result-icon">✅</div>
+          <div class="result-title">No Breaches Found</div>
+          <div class="result-detail">This email was not found in any known data breaches. Stay vigilant!</div>
+        </div>
+      `;
+    } else {
+      const count = breachData.breaches.length;
+      html += `
+        <div class="result-box breached">
+          <div class="result-icon">🚨</div>
+          <div class="result-title">Found in ${count} Breach${count > 1 ? 'es' : ''}</div>
+          <div class="result-detail">This email appeared in <strong class="text-red">${count}</strong> known data breach${count > 1 ? 'es' : ''}.</div>
+        </div>
+
+        <div class="section-title mt-lg">Breach Timeline</div>
+        <div class="breach-list">
+      `;
+
+      // Sort breaches by date (newest first)
+      const sorted = [...breachData.breaches].sort((a, b) => {
+        const da = a.xposed_date || '0000';
+        const db = b.xposed_date || '0000';
+        return db.localeCompare(da);
+      });
+
+      // Show top 15 breaches, collapse rest
+      const showCount = 15;
+      const visible = sorted.slice(0, showCount);
+      const hidden = sorted.slice(showCount);
+
+      visible.forEach((b) => {
+        html += buildBreachCard(b);
+      });
+
+      if (hidden.length > 0) {
+        html += `
+          <div class="breach-expand-wrap">
+            <button class="cyber-btn" id="show-more-breaches" style="width:100%; margin-top: var(--space-sm);">
+              Show ${hidden.length} More Breach${hidden.length > 1 ? 'es' : ''}
+            </button>
+            <div class="breach-hidden" id="hidden-breaches" style="display:none;">
+        `;
+        hidden.forEach((b) => {
+          html += buildBreachCard(b);
+        });
+        html += `
+            </div>
+          </div>
+        `;
+      }
+
+      html += '</div>'; // .breach-list
+    }
+
+    html += '</div>'; // .cyber-card
+
+    // ══════════════════════════════════════
+    // SECTION 2: Gravatar
+    // ══════════════════════════════════════
     html += `
       <div class="cyber-card">
         <div class="card-header">
@@ -197,7 +302,9 @@
 
     html += '</div>';
 
-    // ── DNS & Email Security Section ──
+    // ══════════════════════════════════════
+    // SECTION 3: DNS & Email Security
+    // ══════════════════════════════════════
     html += `
       <div class="cyber-card">
         <div class="card-header">
@@ -210,7 +317,6 @@
         <div class="dns-checks">
     `;
 
-    // MX Records
     html += buildCheckRow(
       'MX Records (Mail Server)',
       hasMX,
@@ -219,7 +325,6 @@
         : 'No MX records — this domain cannot receive email'
     );
 
-    // SPF
     html += buildCheckRow(
       'SPF (Sender Policy Framework)',
       !!spfRecord,
@@ -228,7 +333,6 @@
         : 'No SPF record — emails from this domain can be easily spoofed'
     );
 
-    // DMARC
     html += buildCheckRow(
       'DMARC (Anti-Spoofing Policy)',
       !!dmarcRecord,
@@ -237,7 +341,6 @@
         : 'No DMARC policy — domain is vulnerable to email impersonation'
     );
 
-    // Overall verdict
     const score = (hasMX ? 1 : 0) + (spfRecord ? 1 : 0) + (dmarcRecord ? 1 : 0);
     let verdict, verdictClass, verdictIcon;
     if (score === 3) {
@@ -264,7 +367,9 @@
       </div>
     `;
 
-    // ── Terminal Output ──
+    // ══════════════════════════════════════
+    // SECTION 4: Terminal Output
+    // ══════════════════════════════════════
     html += `
       <div class="cyber-card">
         <div class="card-header">
@@ -283,6 +388,7 @@
             <div><span class="prompt">$ </span><span class="label">domain:</span> <span class="value">${escapeHtml(domain)}</span></div>
             <div><span class="prompt">$ </span><span class="label">md5:</span> <span class="value">${hash}</span></div>
             <div><span class="prompt">$ </span><span class="label">gravatar:</span> <span class="value ${gravatarExists ? '' : 'warn'}">${gravatarExists ? 'FOUND' : 'NOT FOUND'}</span></div>
+            <div><span class="prompt">$ </span><span class="label">breaches:</span> <span class="value ${breachData.found ? 'danger' : ''}">${breachData.found ? breachData.breaches.length + ' FOUND' : 'NONE'}</span></div>
             <div><span class="prompt">$ </span><span class="label">mx:</span> <span class="value ${hasMX ? '' : 'danger'}">${hasMX ? mxRecords.map((r) => r.data).join(', ') : 'NONE'}</span></div>
             <div><span class="prompt">$ </span><span class="label">spf:</span> <span class="value ${spfRecord ? '' : 'danger'}">${spfRecord ? 'PRESENT' : 'MISSING'}</span></div>
             <div><span class="prompt">$ </span><span class="label">dmarc:</span> <span class="value ${dmarcRecord ? '' : 'danger'}">${dmarcRecord ? 'PRESENT' : 'MISSING'}</span></div>
@@ -293,8 +399,66 @@
     `;
 
     resultContainer.innerHTML = html;
+
+    // Attach "show more" button handler
+    const showMoreBtn = document.getElementById('show-more-breaches');
+    if (showMoreBtn) {
+      showMoreBtn.addEventListener('click', () => {
+        const hiddenEl = document.getElementById('hidden-breaches');
+        if (hiddenEl.style.display === 'none') {
+          hiddenEl.style.display = 'block';
+          showMoreBtn.textContent = 'Show Less';
+        } else {
+          hiddenEl.style.display = 'none';
+          showMoreBtn.textContent = `Show ${hiddenEl.children.length} More Breaches`;
+        }
+      });
+    }
+
     btn.disabled = false;
     btn.textContent = 'Scan';
+  }
+
+  // ── Build a breach card ──
+  function buildBreachCard(breach) {
+    const name = escapeHtml(breach.breach || breach.domain || 'Unknown');
+    const date = breach.xposed_date || 'Unknown';
+    const domain = escapeHtml(breach.domain || '');
+    const records = breach.xposed_records ? breach.xposed_records.toLocaleString() : '?';
+    const dataTypes = breach.xposed_data ? breach.xposed_data.split(';').map((d) => d.trim()) : [];
+    const industry = escapeHtml(breach.industry || '');
+    const risk = breach.password_risk || '';
+    const logoUrl = breach.logo || '';
+
+    let riskBadge = '';
+    if (risk === 'plaintext') {
+      riskBadge = '<span class="badge cve">🔓 Plaintext</span>';
+    } else if (risk === 'easytocrack') {
+      riskBadge = '<span class="badge tag">⚠ Easy to Crack</span>';
+    } else if (risk === 'hardtocrack') {
+      riskBadge = '<span class="badge safe">🔒 Hard to Crack</span>';
+    }
+
+    return `
+      <div class="breach-card">
+        <div class="breach-card-header">
+          ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="" class="breach-logo" onerror="this.style.display='none'">` : ''}
+          <div class="breach-card-info">
+            <div class="breach-name">${name}</div>
+            <div class="breach-meta">
+              ${domain ? `<span>${domain}</span>` : ''}
+              <span>📅 ${escapeHtml(date)}</span>
+              <span>👥 ${records} records</span>
+              ${industry ? `<span>🏢 ${industry}</span>` : ''}
+            </div>
+          </div>
+        </div>
+        <div class="badge-list mt-sm">
+          ${dataTypes.map((d) => `<span class="badge port">${escapeHtml(d)}</span>`).join('')}
+          ${riskBadge}
+        </div>
+      </div>
+    `;
   }
 
   // ── Check if Gravatar avatar exists ──
@@ -335,12 +499,5 @@
     const email = input.value.trim();
     if (!email || !email.includes('@')) return;
     runEmailRecon(email);
-  });
-
-  // ── Lazy init ──
-  document.addEventListener('cyberspace:tab-change', (e) => {
-    if (e.detail.tab === 'email' && !hasInitialized) {
-      hasInitialized = true;
-    }
   });
 })();
