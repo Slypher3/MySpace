@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CyberSpace — A cyberpunk network reconnaissance and security dashboard. IP lookup, port scanning, password breach checking, and cyber jokes.">
+  <title>CyberSpace // Network Recon Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+</head>
+<body>
+
+  <!-- ═══════════════ BOOT SEQUENCE ═══════════════ -->
+  <div id="boot-screen">
+    <div class="boot-terminal">
+      <div class="boot-line" data-delay="0">[ BOOT ] Initializing CyberSpace kernel v2.4.1...</div>
+      <div class="boot-line" data-delay="200">[ NET  ] Establishing secure connection...</div>
+      <div class="boot-line ok" data-delay="500">[ OK   ] Network interface online</div>
+      <div class="boot-line" data-delay="700">[ SYS  ] Loading reconnaissance modules...</div>
+      <div class="boot-line ok" data-delay="900">[ OK   ] IP Geolocation module loaded</div>
+      <div class="boot-line ok" data-delay="1050">[ OK   ] Shodan InternetDB module loaded</div>
+      <div class="boot-line ok" data-delay="1200">[ OK   ] HIBP Password Checker module loaded</div>
+      <div class="boot-line" data-delay="1400">[ SEC  ] Verifying integrity checksums...</div>
+      <div class="boot-line ok" data-delay="1700">[ OK   ] All modules verified</div>
+      <div class="boot-line warn" data-delay="1900">[ SYS  ] Entering cyberspace...</div>
+      <div class="boot-progress">
+        <div class="boot-progress-bar" id="boot-progress"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ HEADER / NAV ═══════════════ -->
+  <header>
+    <div class="header-inner">
+      <a href="#" class="logo glitch">CyberSpace</a>
+      <nav class="tab-nav" id="tab-nav" role="tablist">
+        <button class="tab-btn active" data-tab="network" role="tab" aria-selected="true" aria-controls="panel-network" id="tab-network">
+          <span class="tab-icon">🛡️</span>
+          <span class="tab-label">Network Recon</span>
+        </button>
+        <button class="tab-btn" data-tab="pwned" role="tab" aria-selected="false" aria-controls="panel-pwned" id="tab-pwned">
+          <span class="tab-icon">🔑</span>
+          <span class="tab-label">Password Check</span>
+        </button>
+        <button class="tab-btn" data-tab="jokes" role="tab" aria-selected="false" aria-controls="panel-jokes" id="tab-jokes">
+          <span class="tab-icon">😂</span>
+          <span class="tab-label">Cyber Jokes</span>
+        </button>
+        <button class="tab-btn" data-tab="about" role="tab" aria-selected="false" aria-controls="panel-about" id="tab-about">
+          <span class="tab-icon">📡</span>
+          <span class="tab-label">About</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+  <main>
+
+    <!-- ──────── TAB 1: NETWORK RECON ──────── -->
+    <section class="tab-panel active" id="panel-network" role="tabpanel" aria-labelledby="tab-network">
+
+      <!-- IP Info Card -->
+      <div class="cyber-card">
+        <div class="card-header">
+          <span class="card-icon">🌐</span>
+          <h2>IP Intelligence</h2>
+          <span class="status-dot online" id="ip-status"></span>
+        </div>
+        <div id="ip-loading" class="loader">
+          <div class="loader-spinner"></div>
+          <span>Scanning network identity...</span>
+        </div>
+        <div id="ip-data" class="hidden">
+          <div class="data-grid" id="ip-grid">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        <div id="ip-error" class="hidden">
+          <div class="result-box breached">
+            <div class="result-icon">⚠️</div>
+            <div class="result-title">Connection Failed</div>
+            <div class="result-detail">Unable to reach IP intelligence service. Check your connection.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shodan Card -->
+      <div class="cyber-card">
+        <div class="card-header">
+          <span class="card-icon">🔍</span>
+          <h2>Exposed Services</h2>
+        </div>
+        <div id="shodan-loading" class="loader">
+          <div class="loader-spinner"></div>
+          <span>Querying Shodan InternetDB...</span>
+        </div>
+        <div id="shodan-data" class="hidden">
+          <!-- Ports -->
+          <div class="section-title">Open Ports</div>
+          <div class="badge-list" id="shodan-ports"></div>
+
+          <!-- Hostnames -->
+          <div class="section-title mt-lg">Hostnames</div>
+          <div class="badge-list" id="shodan-hostnames"></div>
+
+          <!-- CVEs -->
+          <div class="section-title mt-lg">Vulnerabilities (CVE)</div>
+          <div class="badge-list" id="shodan-cves"></div>
+
+          <!-- Tags -->
+          <div class="section-title mt-lg">Tags</div>
+          <div class="badge-list" id="shodan-tags"></div>
+        </div>
+        <div id="shodan-empty" class="hidden">
+          <div class="result-box safe">
+            <div class="result-icon">✅</div>
+            <div class="result-title">Clean Profile</div>
+            <div class="result-detail">No exposed services or known vulnerabilities detected for this IP.</div>
+          </div>
+        </div>
+        <div id="shodan-error" class="hidden">
+          <div class="result-box breached">
+            <div class="result-icon">⚠️</div>
+            <div class="result-title">Scan Unavailable</div>
+            <div class="result-detail">Could not retrieve Shodan data. The service may be temporarily unavailable.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Raw terminal output -->
+      <div class="cyber-card">
+        <div class="card-header">
+          <span class="card-icon">💻</span>
+          <h2>Raw Output</h2>
+        </div>
+        <div class="terminal">
+          <div class="terminal-header">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+            <span class="terminal-title">cyberspace://recon</span>
+          </div>
+          <div class="terminal-body" id="terminal-output">
+            <span class="prompt">$ </span><span class="label">awaiting scan results...</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ──────── TAB 2: PASSWORD CHECK ──────── -->
+    <section class="tab-panel" id="panel-pwned" role="tabpanel" aria-labelledby="tab-pwned">
+
+      <div class="cyber-card">
+        <div class="card-header">
+          <span class="card-icon">🔑</span>
+          <h2>Password Breach Checker</h2>
+        </div>
+
+        <p class="about-text" style="margin-bottom: var(--space-lg);">
+          Check if your password has appeared in known data breaches. Uses the
+          <span class="text-cyan">Have I Been Pwned</span> k-Anonymity model — your password
+          <strong class="text-green">never leaves your browser</strong>.
+        </p>
+
+        <form class="password-form" id="pwned-form">
+          <div class="input-group">
+            <input
+              type="password"
+              class="cyber-input"
+              id="pwned-input"
+              placeholder="Enter password to check..."
+              autocomplete="off"
+              required
+            >
+            <button type="button" class="toggle-visibility" id="toggle-pw-visibility" aria-label="Toggle password visibility">
+              👁️
+            </button>
+          </div>
+          <button type="submit" class="cyber-btn" id="pwned-btn">
+            Scan
+          </button>
+        </form>
+
+        <div id="pwned-result"></div>
+
+        <div class="security-notice">
+          <span class="notice-icon">🔒</span>
+          <div>
+            <strong class="text-green">How it works:</strong> Your password is hashed with SHA-1 locally using
+            <code class="text-cyan">crypto.subtle</code>. Only the first 5 characters of the hash are sent to the API.
+            The full hash is compared client-side against returned suffixes. Your password never leaves this device.
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ──────── TAB 3: CYBER JOKES ──────── -->
+    <section class="tab-panel" id="panel-jokes" role="tabpanel" aria-labelledby="tab-jokes">
+
+      <div class="cyber-card">
+        <div class="card-header">
+          <span class="card-icon">😂</span>
+          <h2>// Joke Decoder</h2>
+        </div>
+
+        <div class="terminal">
+          <div class="terminal-header">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+            <span class="terminal-title">cyberspace://jokes/programming</span>
+          </div>
+          <div class="terminal-body">
+            <div class="joke-container" id="joke-container">
+              <div class="loader">
+                <div class="loader-spinner"></div>
+                <span>Decrypting joke database...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="joke-actions">
+          <button class="cyber-btn magenta glitch" id="joke-btn">
+            ⟳ Next Joke
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ──────── TAB 4: ABOUT ──────── -->
+    <section class="tab-panel" id="panel-about" role="tabpanel" aria-labelledby="tab-about">
+
+      <div class="cyber-card">
+        <div class="card-header">
+          <span class="card-icon">📡</span>
+          <h2>About CyberSpace</h2>
+        </div>
+
+        <div class="about-section">
+          <h3>// Mission</h3>
+          <p class="about-text">
+            CyberSpace is a client-side network reconnaissance and security awareness dashboard.
+            It uses exclusively <span class="text-cyan">free, keyless APIs</span> to provide real-time
+            intelligence about your network exposure, password security, and a dose of programming humor.
+            All processing happens in your browser — <span class="text-green">no data is sent to any third-party servers
+            beyond the listed APIs</span>.
+          </p>
+        </div>
+
+        <div class="about-section">
+          <h3>// APIs Used</h3>
+          <ul class="api-list">
+            <li>
+              <span class="api-icon">🌐</span>
+              <div>
+                <div class="api-name">ipapi.co</div>
+                <div class="api-desc">
+                  IP geolocation, ISP identification, and ASN lookup. No key required.
+                  <br><a href="https://ipapi.co" target="_blank" rel="noopener">ipapi.co →</a>
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="api-icon">🔍</span>
+              <div>
+                <div class="api-name">Shodan InternetDB</div>
+                <div class="api-desc">
+                  Free endpoint from Shodan exposing open ports, hostnames, tags, and CVEs for any IP.
+                  <br><a href="https://internetdb.shodan.io" target="_blank" rel="noopener">internetdb.shodan.io →</a>
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="api-icon">🔑</span>
+              <div>
+                <div class="api-name">Have I Been Pwned — Pwned Passwords</div>
+                <div class="api-desc">
+                  k-Anonymity password breach checker. Only a 5-char hash prefix is sent; full comparison is local.
+                  <br><a href="https://haveibeenpwned.com/API/v3#PwnedPasswords" target="_blank" rel="noopener">haveibeenpwned.com →</a>
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="api-icon">😂</span>
+              <div>
+                <div class="api-name">JokeAPI v2</div>
+                <div class="api-desc">
+                  Programming jokes API. Filtered to the "Programming" category for maximum nerd cred.
+                  <br><a href="https://v2.jokeapi.dev" target="_blank" rel="noopener">v2.jokeapi.dev →</a>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
+
+        <div class="about-section">
+          <h3>// Tech Stack</h3>
+          <p class="about-text">
+            Pure <span class="text-cyan">HTML</span> / <span class="text-magenta">CSS</span> / <span class="text-green">JavaScript</span>.
+            No frameworks, no build tools, no dependencies. Just raw code in the void.
+          </p>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ═══════════════ FOOTER ═══════════════ -->
+  <footer>
+    <div class="footer-ascii">
+ ██████╗██╗   ██╗██████╗ ███████╗██████╗ ███████╗██████╗  █████╗  ██████╗███████╗
+██╔════╝╚██╗ ██╔╝██╔══██╗██╔════╝██╔══██╗██╔════╝██╔══██╗██╔══██╗██╔════╝██╔════╝
+██║      ╚████╔╝ ██████╔╝█████╗  ██████╔╝███████╗██████╔╝███████║██║     █████╗
+██║       ╚██╔╝  ██╔══██╗██╔══╝  ██╔══██╗╚════██║██╔═══╝ ██╔══██║██║     ██╔══╝
+╚██████╗   ██║   ██████╔╝███████╗██║  ██║███████║██║     ██║  ██║╚██████╗███████╗
+ ╚═════╝   ╚═╝   ╚═════╝ ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝  ╚═╝ ╚═════╝╚══════╝
+    </div>
+    <p>
+      <span class="text-cyan">CyberSpace</span> &mdash; Built with zero dependencies.
+      All data processed client-side.
+    </p>
+    <p class="mt-sm">
+      APIs: <a href="https://ipapi.co" target="_blank" rel="noopener">ipapi.co</a> &bull;
+      <a href="https://internetdb.shodan.io" target="_blank" rel="noopener">Shodan InternetDB</a> &bull;
+      <a href="https://haveibeenpwned.com" target="_blank" rel="noopener">HIBP</a> &bull;
+      <a href="https://v2.jokeapi.dev" target="_blank" rel="noopener">JokeAPI</a>
+    </p>
+  </footer>
+
+  <!-- ═══════════════ SCRIPTS ═══════════════ -->
+  <script src="js/app.js"></script>
+  <script src="js/ip-dashboard.js"></script>
+  <script src="js/pwned.js"></script>
+  <script src="js/jokes.js"></script>
+</body>
+</html>
