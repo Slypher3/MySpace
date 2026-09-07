@@ -46,6 +46,10 @@
           <span class="tab-icon">😂</span>
           <span class="tab-label">Cyber Jokes</span>
         </button>
+        <button class="tab-btn" data-tab="email" role="tab" aria-selected="false" aria-controls="panel-email" id="tab-email">
+          <span class="tab-icon">🕵️</span>
+          <span class="tab-label">Email Recon</span>
+        </button>
         <button class="tab-btn" data-tab="about" role="tab" aria-selected="false" aria-controls="panel-about" id="tab-about">
           <span class="tab-icon">📡</span>
           <span class="tab-label">About</span>
@@ -295,6 +299,26 @@
                 </div>
               </div>
             </li>
+            <li>
+              <span class="api-icon">🕵️</span>
+              <div>
+                <div class="api-name">Gravatar</div>
+                <div class="api-desc">
+                  Public avatar and profile lookup via MD5 email hash. No key required.
+                  <br><a href="https://gravatar.com" target="_blank" rel="noopener">gravatar.com →</a>
+                </div>
+              </div>
+            </li>
+            <li>
+              <span class="api-icon">🌐</span>
+              <div>
+                <div class="api-name">Cloudflare DNS-over-HTTPS</div>
+                <div class="api-desc">
+                  Public DNS resolver for MX, SPF, and DMARC record lookups. Used for email domain security auditing.
+                  <br><a href="https://developers.cloudflare.com/1.1.1.1/encryption/dns-over-https/" target="_blank" rel="noopener">cloudflare-dns.com →</a>
+                </div>
+              </div>
+            </li>
           </ul>
         </div>
 
@@ -306,6 +330,52 @@
           </p>
         </div>
       </div>
+
+    </section>
+
+    <!-- ──────── TAB 5: EMAIL RECON ──────── -->
+    <section class="tab-panel" id="panel-email" role="tabpanel" aria-labelledby="tab-email">
+
+      <div class="cyber-card">
+        <div class="card-header">
+          <span class="card-icon">🕵️</span>
+          <h2>Email Reconnaissance</h2>
+        </div>
+
+        <p class="about-text" style="margin-bottom: var(--space-lg);">
+          Enter an email address to scan its <span class="text-cyan">Gravatar profile</span>,
+          verify <span class="text-green">mail server existence</span>, and audit
+          <span class="text-magenta">anti-spoofing protections</span> (SPF, DMARC).
+          All lookups use public DNS records and the Gravatar API.
+        </p>
+
+        <form class="password-form" id="email-recon-form">
+          <div class="input-group">
+            <input
+              type="email"
+              class="cyber-input"
+              id="email-recon-input"
+              placeholder="target@example.com"
+              autocomplete="off"
+              required
+            >
+          </div>
+          <button type="submit" class="cyber-btn magenta" id="email-recon-btn">
+            Scan
+          </button>
+        </form>
+
+        <div class="security-notice mt-md">
+          <span class="notice-icon">🔒</span>
+          <div>
+            <strong class="text-green">Privacy:</strong> Email is hashed locally with MD5 for Gravatar.
+            DNS lookups query public records via Cloudflare DoH.
+            No data is stored or sent to third-party servers beyond these APIs.
+          </div>
+        </div>
+      </div>
+
+      <div id="email-recon-result"></div>
 
     </section>
 
@@ -329,7 +399,8 @@
       APIs: <a href="https://ipapi.co" target="_blank" rel="noopener">ipapi.co</a> &bull;
       <a href="https://internetdb.shodan.io" target="_blank" rel="noopener">Shodan InternetDB</a> &bull;
       <a href="https://haveibeenpwned.com" target="_blank" rel="noopener">HIBP</a> &bull;
-      <a href="https://v2.jokeapi.dev" target="_blank" rel="noopener">JokeAPI</a>
+      <a href="https://v2.jokeapi.dev" target="_blank" rel="noopener">JokeAPI</a> &bull;
+      <a href="https://gravatar.com" target="_blank" rel="noopener">Gravatar</a>
     </p>
   </footer>
 
@@ -338,5 +409,6 @@
   <script src="js/ip-dashboard.js"></script>
   <script src="js/pwned.js"></script>
   <script src="js/jokes.js"></script>
+  <script src="js/email-recon.js"></script>
 </body>
 </html>

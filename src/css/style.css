@@ -874,6 +874,115 @@ main {
 }
 
 /* ═══════════════════════════════════════════════════
+   EMAIL RECON / GRAVATAR
+   ═══════════════════════════════════════════════════ */
+.gravatar-profile {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xl);
+  padding: var(--space-md);
+}
+
+.gravatar-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.gravatar-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px solid var(--cyan);
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+
+.gravatar-glow {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: conic-gradient(var(--cyan), var(--magenta), var(--cyan));
+  opacity: 0.4;
+  filter: blur(10px);
+  z-index: 0;
+  animation: glowRotate 4s linear infinite;
+}
+
+@keyframes glowRotate {
+  to { transform: rotate(360deg); }
+}
+
+.gravatar-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* DNS Check Rows */
+.dns-checks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.dns-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 240, 255, 0.08);
+  border-radius: var(--radius);
+  transition: border-color var(--transition-fast);
+}
+
+.dns-check-row:hover {
+  border-color: rgba(0, 240, 255, 0.2);
+}
+
+.dns-check-status {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.dns-check-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.dns-check-label {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.dns-check-detail {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+@media (max-width: 768px) {
+  .gravatar-profile {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .gravatar-avatar {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
    LOADING STATES
    ═══════════════════════════════════════════════════ */
 .loader {
